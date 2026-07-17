@@ -39,6 +39,11 @@ export function RoomProvider({ children }: { children: ReactNode }) {
       if (updatedRoom.matchState) {
         setTimeLeft(updatedRoom.matchState.timeLeft);
       }
+      if (updatedRoom.status === 'finished') {
+        sessionStorage.removeItem('codeDuelRoomId');
+      } else {
+        sessionStorage.setItem('codeDuelRoomId', updatedRoom.id);
+      }
     };
 
     const handleTimerTick = (time: number) => {
@@ -47,13 +52,22 @@ export function RoomProvider({ children }: { children: ReactNode }) {
 
     const handleConnect = () => {
       const currentRoom = roomRef.current;
-      if (currentRoom) {
-        socket.emit('reconnect-room', { userId: getUserId(), roomId: currentRoom.id }, (response: SocketResponse) => {
+      const storedRoomId = sessionStorage.getItem('codeDuelRoomId');
+      const roomIdToReconnect = currentRoom?.id || storedRoomId;
+
+      if (roomIdToReconnect) {
+        socket.emit('reconnect-room', { userId: getUserId(), roomId: roomIdToReconnect }, (response: SocketResponse) => {
           if (response.error) {
              setError(response.error);
              setRoom(null);
+             sessionStorage.removeItem('codeDuelRoomId');
           } else if (response.room) {
              setRoom(response.room);
+             if (response.room.status === 'finished') {
+               sessionStorage.removeItem('codeDuelRoomId');
+             } else {
+               sessionStorage.setItem('codeDuelRoomId', response.room.id);
+             }
           }
         });
       }
@@ -62,6 +76,11 @@ export function RoomProvider({ children }: { children: ReactNode }) {
     socket.on('room-updated', handleRoomUpdated);
     socket.on('timer-tick', handleTimerTick);
     socket.on('connect', handleConnect);
+
+    // If socket is already connected on mount, trigger connection handler immediately
+    if (socket.connected) {
+      handleConnect();
+    }
 
     return () => {
       socket.off('room-updated', handleRoomUpdated);
@@ -80,6 +99,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
           reject(response.error);
         } else if (response.room) {
           setRoom(response.room);
+          sessionStorage.setItem('codeDuelRoomId', response.room.id);
           resolve(response.room.id);
         }
       });
@@ -94,6 +114,7 @@ export function RoomProvider({ children }: { children: ReactNode }) {
           reject(response.error);
         } else if (response.room) {
           setRoom(response.room);
+          sessionStorage.setItem('codeDuelRoomId', response.room.id);
           resolve(response.room.id);
         }
       });

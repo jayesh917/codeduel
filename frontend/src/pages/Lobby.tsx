@@ -17,14 +17,24 @@ export default function Lobby() {
   const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
-    if (!room) {
+    const storedRoomId = sessionStorage.getItem('codeDuelRoomId');
+    if (!room && !storedRoomId) {
       navigate('/');
-    } else if (room.status === 'in-progress') {
+    } else if (room?.status === 'in-progress') {
       navigate('/battle');
     }
   }, [room, navigate]);
 
-  if (!room) return null;
+  if (!room) {
+    return (
+      <PageWrapper>
+        <Container className="max-w-xl flex h-[60vh] items-center justify-center">
+          <Spinner size={32} className="text-primary" />
+          <span className="ml-3 text-secondary">Reconnecting to lobby...</span>
+        </Container>
+      </PageWrapper>
+    );
+  }
 
   const handleCopy = () => {
     navigator.clipboard.writeText(room.id);

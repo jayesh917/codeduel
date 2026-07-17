@@ -29,7 +29,7 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
     return code;
   };
 
-  socket.on('create-room', ({ userId, name, bestOf, language }, callback) => {
+  socket.on('create-room', async ({ userId, name, bestOf, language }, callback) => {
     if (!callback) return;
     if (typeof userId !== 'string' || userId.length > 50) return callback({ error: 'Invalid User ID.' });
     
@@ -46,14 +46,14 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
       attempts++;
     }
     
-    socket.join(roomId);
+    await socket.join(roomId);
     const match = CoreGameStateManager.createMatch(roomId, userId, cleanBestOf, cleanLang, cleanName, socket.id);
     console.log(`[GameStateManager] Room Created: ${roomId} by ${cleanName}`);
     
     callback({ success: true, room: match.legacyRoom });
   });
 
-  socket.on('join-room', ({ userId, name, roomId }, callback) => {
+  socket.on('join-room', async ({ userId, name, roomId }, callback) => {
     if (!callback) return;
     if (typeof userId !== 'string' || userId.length > 50) return callback({ error: 'Invalid User ID.' });
     if (!validateRoomCode(roomId)) return callback({ error: 'Invalid Room Code.' });
@@ -71,7 +71,7 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
         }
     }
     
-    socket.join(roomId);
+    await socket.join(roomId);
     const result = CoreGameStateManager.joinMatch(socket, roomId, userId, cleanName);
     if (result.error) {
       socket.leave(roomId);
@@ -82,11 +82,11 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
     callback({ success: true, room: result.match?.legacyRoom });
   });
 
-  socket.on('reconnect-room', ({ userId, roomId }, callback) => {
+  socket.on('reconnect-room', async ({ userId, roomId }, callback) => {
     if (!callback) return;
     if (typeof userId !== 'string' || !validateRoomCode(roomId)) return callback({ error: 'Invalid data.' });
 
-    socket.join(roomId);
+    await socket.join(roomId);
     const result = CoreGameStateManager.reconnectPlayer(socket, roomId, userId);
     if (result.error) {
       socket.leave(roomId);

@@ -7,6 +7,7 @@ import { useRoom, useTimer } from '../context/RoomContext';
 import { getUserId } from '../utils/userId';
 import { motion } from 'motion/react';
 import { Trophy } from 'lucide-react';
+import { Spinner } from '../components/ui/Spinner';
 
 const formatTime = (seconds: number | null) => {
   if (seconds === null) return '--';
@@ -78,11 +79,12 @@ export default function Battle() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | string[] | null>(null);
 
   useEffect(() => {
-    if (!room) {
+    const storedRoomId = sessionStorage.getItem('codeDuelRoomId');
+    if (!room && !storedRoomId) {
       navigate('/');
-    } else if (room.status === 'finished') {
+    } else if (room?.status === 'finished') {
       navigate('/results');
-    } else if (room.status !== 'in-progress') {
+    } else if (room && room.status !== 'in-progress') {
       navigate('/lobby');
     }
   }, [room, navigate]);
@@ -93,13 +95,33 @@ export default function Battle() {
     }
   }, [room?.matchState?.currentRoundIndex, room?.matchState?.roundStatus]);
 
-  if (!room || !room.matchState) return null;
+  if (!room || !room.matchState) {
+    return (
+      <PageWrapper>
+        <Container className="max-w-5xl flex h-[60vh] items-center justify-center">
+          <Spinner size={32} className="text-primary" />
+          <span className="ml-3 text-secondary">Reconnecting to battle...</span>
+        </Container>
+      </PageWrapper>
+    );
+  }
 
   const matchState = room.matchState;
   const currentQuestion = matchState.questions[matchState.currentRoundIndex];
   const me = room.players.find(p => p.userId === getUserId());
   const opponent = room.players.find(p => p.userId !== getUserId());
   const roundStatus = matchState.roundStatus;
+
+  if (!currentQuestion) {
+    return (
+      <PageWrapper>
+        <Container className="max-w-5xl flex h-[60vh] items-center justify-center">
+          <Spinner size={32} className="text-primary" />
+          <span className="ml-3 text-secondary">Loading question...</span>
+        </Container>
+      </PageWrapper>
+    );
+  }
 
   const handleOptionClick = (option: string) => {
     if (roundStatus !== 'playing' || me?.status === 'Answered') return;

@@ -21,12 +21,18 @@ async function startServer() {
   app.use(compression());
 
   const allowedOrigins = process.env.FRONTEND_URL 
-    ? [process.env.FRONTEND_URL]
+    ? [process.env.FRONTEND_URL.replace(/\/$/, '')] // Remove trailing slash
     : ['http://localhost:3000'];
 
   const corsOptions = {
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.run.app')) {
+      if (
+        !origin || 
+        allowedOrigins.includes(origin) || 
+        origin.endsWith('.run.app') || 
+        origin.endsWith('.vercel.app') || 
+        /^https:\/\/codeduel-.*\.vercel\.app$/.test(origin)
+      ) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
@@ -44,9 +50,9 @@ async function startServer() {
   const server = http.createServer(app);
   
   const io = new Server(server, {
-  cors: corsOptions,
-  transports: ['websocket'],
-});
+    cors: corsOptions,
+    transports: ['polling', 'websocket'],
+  });
 
   CoreGameStateManager.initialize(io);
 

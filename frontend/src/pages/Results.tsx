@@ -9,6 +9,7 @@ import { getUserId } from '../utils/userId';
 import { saveMatchHistory, MatchRecord } from '../utils/history';
 import { AnimatePresence } from 'motion/react';
 import { Toast } from '../components/ui/Toast';
+import { Spinner } from '../components/ui/Spinner';
 
 export default function Results() {
   const navigate = useNavigate();
@@ -17,7 +18,12 @@ export default function Results() {
   const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
-    if (!room || room.status !== 'finished') {
+    const storedRoomId = sessionStorage.getItem('codeDuelRoomId');
+    if (!room && !storedRoomId) {
+      navigate('/');
+      return;
+    }
+    if (room && room.status !== 'finished') {
       navigate('/');
       return;
     }
@@ -63,7 +69,16 @@ export default function Results() {
     }
   }, [room, navigate]);
 
-  if (!room || room.status !== 'finished' || !room.matchState) return null;
+  if (!room || room.status !== 'finished' || !room.matchState) {
+    return (
+      <PageWrapper>
+        <Container className="max-w-5xl flex h-[60vh] items-center justify-center">
+          <Spinner size={32} className="text-primary" />
+          <span className="ml-3 text-secondary">Loading results...</span>
+        </Container>
+      </PageWrapper>
+    );
+  }
 
   const me = room.players.find(p => p.userId === getUserId());
   const opponent = room.players.find(p => p.userId !== getUserId());

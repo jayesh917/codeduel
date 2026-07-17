@@ -44,8 +44,9 @@ async function startServer() {
   const server = http.createServer(app);
   
   const io = new Server(server, {
-    cors: corsOptions,
-  });
+  cors: corsOptions,
+  transports: ['websocket'],
+});
 
   CoreGameStateManager.initialize(io);
 

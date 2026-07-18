@@ -65,9 +65,10 @@ async function startServer() {
     });
   });
 
-  app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok' });
-  });
+app.get("/api/health", (req, res) => {
+  console.log("HEALTH API HIT");
+  res.send("Backend Working");
+});
 
   // Global error handler
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

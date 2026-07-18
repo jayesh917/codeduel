@@ -31,26 +31,37 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
 
   socket.on('create-room', async ({ userId, name, bestOf, language }, callback) => {
     if (!callback) return;
-    if (typeof userId !== 'string' || userId.length > 50) return callback({ error: 'Invalid User ID.' });
-    
-    const cleanName = validatePlayerName(name);
-    if (!cleanName) return callback({ error: 'Invalid name. Must be 2-20 characters long.' });
+    try {
+      if (typeof userId !== 'string' || userId.length > 50) {
+        return callback({ error: 'Invalid User ID.' });
+      }
+      
+      const cleanName = validatePlayerName(name);
+      if (!cleanName) {
+        return callback({ error: 'Invalid name. Must be 2-20 characters long.' });
+      }
 
-    const cleanLang = validateLanguage(language) || 'Python';
-    const cleanBestOf = validateBestOf(bestOf) || 3;
-    
-    let roomId = generateRoomCode();
-    let attempts = 0;
-    while (CoreGameStateManager.getMatch(roomId) && attempts < 10) {
-      roomId = generateRoomCode();
-      attempts++;
+      const cleanLang = validateLanguage(language) || 'Python';
+      const cleanBestOf = validateBestOf(bestOf) || 3;
+      
+      let roomId = generateRoomCode();
+      let attempts = 0;
+      while (CoreGameStateManager.getMatch(roomId) && attempts < 10) {
+        roomId = generateRoomCode();
+        attempts++;
+      }
+      
+      await socket.join(roomId);
+      const match = CoreGameStateManager.createMatch(roomId, userId, cleanBestOf, cleanLang, cleanName, socket.id);
+      console.log(`[GameStateManager] Room Created: ${roomId} by ${cleanName}`);
+      
+      callback({ success: true, room: match.legacyRoom });
+    } catch (error: any) {
+      console.error('[Socket Error] Failed to create room:', error);
+      callback({
+        error: error.message
+      });
     }
-    
-    await socket.join(roomId);
-    const match = CoreGameStateManager.createMatch(roomId, userId, cleanBestOf, cleanLang, cleanName, socket.id);
-    console.log(`[GameStateManager] Room Created: ${roomId} by ${cleanName}`);
-    
-    callback({ success: true, room: match.legacyRoom });
   });
 
   socket.on('join-room', async ({ userId, name, roomId }, callback) => {
@@ -110,3 +121,4 @@ export function setupRoomHandlers(io: Server, socket: Socket) {
     CoreGameStateManager.handleDisconnect(socket.id);
   });
 }
+
